@@ -7,24 +7,24 @@ class User < ActiveRecord::Base
                     format: { with: VALID_EMAIL_REGEX },
                     uniqueness: {case_sensitive: false}
   has_secure_password
-  validates :password, presence: true, length: { minimum: 6 }
-  def current_user
-    User.find_by(id: session[:user_id])
-  end
-
+  validates :password, presence: true, length: { minimum: 6 }, allow_nil: true
+  # def current_user
+  #   User.find_by(id: session[:user_id])
+  # end
+  class << self
    # Returns the hash digest of the given string.
-  def User.digest(string)
-    cost = ActiveModel::SecurePassword.min_cost ? BCrypt::Engine::MIN_COST :
-                                                  BCrypt::Engine.cost
-    BCrypt::Password.create(string, cost: cost)
-  end
-  
+    def digest(string)
+      cost = ActiveModel::SecurePassword.min_cost ? BCrypt::Engine::MIN_COST :
+                                                    BCrypt::Engine.cost
+      BCrypt::Password.create(string, cost: cost)
+    end
+    
 
-   # Returns a random token.
-  def User.new_token
-    SecureRandom.urlsafe_base64
+     # Returns a random token.
+    def new_token
+      SecureRandom.urlsafe_base64
+    end
   end
-
    # Remembers a user in the database for use in persistent sessions.
   def remember
     self.remember_token = User.new_token
@@ -40,5 +40,12 @@ class User < ActiveRecord::Base
   def forget
     update_attribute(:remember_digest, nil)
   end
+  
 
+   # Returns true if the given token matches the digest.
+  def authenticated?(remember_token)
+    return false if remember_digest.nil?
+    BCrypt::Password.new(remember_digest).is_password?(remember_token)
+  end
+  
 end
